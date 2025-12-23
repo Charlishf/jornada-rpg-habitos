@@ -1,5 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { supabase } from './supabase';
+import { getOrCreatePlayerId } from './player';
 
 /**
  * CONSTANTES E INTERFACES DE CLASSE
@@ -233,6 +235,31 @@ export default function App() {
   const [ultimoFeedback, setUltimoFeedback] = useState<string | null>(null);
   const [modalItemUso, setModalItemUso] = useState<{ idUnique: string; tipo: TipoEfeito } | null>(null);
 
+useEffect(() => {
+  const initPlayer = async () => {
+    const playerId = getOrCreatePlayerId();
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', playerId)
+      .single();
+
+    if (!data) {
+      await supabase.from('profiles').insert({
+        id: playerId,
+        data: {}
+      });
+    }
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Erro ao inicializar jogador:', error);
+    }
+  };
+
+  initPlayer();
+}, []);
+  
   useEffect(() => {
     localStorage.setItem(CHAVE_STORAGE, JSON.stringify(estado));
   }, [estado]);
