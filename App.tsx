@@ -261,16 +261,25 @@ useEffect(() => {
     // tenta carregar da nuvem
     const remoteState = await loadRemoteState(playerId);
     if (remoteState) {
-      setEstado(remoteState);
-      return;
-    }
+  setEstado(prev => ({
+    ...estadoInicial,
+    ...remoteState
+  }));
+  return;
+}
 
     // fallback para localStorage
-    const localState = loadLocalState();
-    if (localState) {
-      setEstado(localState);
-      await saveRemoteState(playerId, localState);
-    }
+const localState = loadLocalState();
+if (localState) {
+  const estadoSeguro = {
+    ...estadoInicial,
+    ...localState
+  };
+
+  setEstado(estadoSeguro);
+  await saveRemoteState(playerId, estadoSeguro);
+}
+
   };
 
   init();
