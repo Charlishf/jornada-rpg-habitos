@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from './supabase';
 import { getOrCreatePlayerId } from './player';
+import { loadLocalState, loadRemoteState, saveLocalState, saveRemoteState } from './persistence';
 
 /**
  * CONSTANTES E INTERFACES DE CLASSE
@@ -236,12 +237,13 @@ export default function App() {
   const [modalItemUso, setModalItemUso] = useState<{ idUnique: string; tipo: TipoEfeito } | null>(null);
 
 useEffect(() => {
-  const initPlayer = async () => {
+  const init = async () => {
     const playerId = getOrCreatePlayerId();
 
+    // garante que o perfil existe
     const { data, error } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, data')
       .eq('id', playerId)
       .single();
 
@@ -255,14 +257,30 @@ useEffect(() => {
     if (error && error.code !== 'PGRST116') {
       console.error('Erro ao inicializar jogador:', error);
     }
+
+    // tenta carregar da nuvem
+    const remoteState = await loadRemoteState(playerId);
+    if (remoteState) {
+      setEstado(remoteState);
+      return;
+    }
+
+    // fallback para localStorage
+    const localState = loadLocalState();
+    if (localState) {
+      setEstado(localState);
+      await saveRemoteState(playerId, localState);
+    }
   };
 
-  initPlayer();
+  init();
 }, []);
-  
-  useEffect(() => {
-    localStorage.setItem(CHAVE_STORAGE, JSON.stringify(estado));
-  }, [estado]);
+
+useEffect(() => {
+  const playerId = getOrCreatePlayerId();
+  saveLocalState(estado);
+  saveRemoteState(playerId, estado);
+}, [estado]);
 
   useEffect(() => {
     if (ultimoFeedback) {
