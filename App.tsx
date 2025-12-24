@@ -223,6 +223,19 @@ const ProgressoBar: React.FC<{ percent: number; cor?: string; small?: boolean }>
 
 export default function App() {
   const [estado, setEstado] = useState<EstadoJogo>(() => {
+  const estadoSeguro = useMemo(() => ({
+  ...estadoSeguro,
+  missoesDiarias: estado.missoesDiarias ?? [],
+  quests: estado.quests ?? [],
+  metas: estado.metas ?? [],
+  penalidades: estado.penalidades ?? [],
+  eventos: estado.eventos ?? [],
+  itensLoja: estado.itensLoja ?? [],
+  inventario: estado.inventario ?? [],
+  habitosRuins: estado.habitosRuins ?? [],
+  conquistas: estado.conquistas ?? []
+}), [estado]);
+
     const salvo = localStorage.getItem(CHAVE_STORAGE);
     if (!salvo) return initialState;
     try {
@@ -258,28 +271,30 @@ useEffect(() => {
       console.error('Erro ao inicializar jogador:', error);
     }
 
-    // tenta carregar da nuvem
+    // 1️⃣ tenta carregar da nuvem
     const remoteState = await loadRemoteState(playerId);
     if (remoteState) {
-  setEstado(prev => ({
-    ...estadoInicial,
-    ...remoteState
-  }));
-  return;
-}
+      const estadoSeguro = {
+        ...initialState,
+        ...remoteState,
+      };
 
-    // fallback para localStorage
-const localState = loadLocalState();
-if (localState) {
-  const estadoSeguro = {
-    ...estadoInicial,
-    ...localState
-  };
+      setEstado(estadoSeguro);
+      saveLocalState(estadoSeguro);
+      return;
+    }
 
-  setEstado(estadoSeguro);
-  await saveRemoteState(playerId, estadoSeguro);
-}
+    // 2️⃣ fallback local
+    const localState = loadLocalState();
+    if (localState) {
+      const estadoSeguro = {
+        ...initialState,
+        ...localState,
+      };
 
+      setEstado(estadoSeguro);
+      await saveRemoteState(playerId, estadoSeguro);
+    }
   };
 
   init();
@@ -302,10 +317,10 @@ useEffect(() => {
    * CÁLCULOS DE PROGRESSÃO E ECONOMIA
    */
   const atributosCalculados = useMemo(() => {
-    const missoesConcluidas = estado.missoesDiarias.filter(m => m.estado === "concluida");
-    const habitosResistidos = estado.habitosRuins.filter(h => h.statusHoje === "resistido");
-    const questsConcluidas = estado.quests.filter(q => q.concluida);
-    const metasConcluidas = estado.metas.filter(m => m.concluida);
+    const missoesConcluidas = estadoSeguro.missoesDiarias.filter(m => m.estado === "concluida");
+    const habitosResistidos = estadoSeguro.habitosRuins.filter(h => h.statusHoje === "resistido");
+    const questsConcluidas = estadoSeguro.quests.filter(q => q.concluida);
+    const metasConcluidas = estadoSeguro.metas.filter(m => m.concluida);
 
     const xpTotais = {
       disciplina: (missoesConcluidas.length * VALORES_BASE.MISSAO.attrXP) + (habitosResistidos.length * 50) + (questsConcluidas.length * VALORES_BASE.QUEST.attrXP),
@@ -378,14 +393,14 @@ useEffect(() => {
   }, [estado.metas, estado.eventos]);
 
   const penalidadesAtivas = useMemo(() => {
-    const pM = estado.missoesDiarias.filter(m => m.estado === "falha" && !m.penalidadeCumprida && !m.protegida).map(m => ({ id: m.id, nome: m.nome, punicao: m.tipoPenalidade, origem: 'missao' as const, dificuldade: m.dificuldade }));
-    const pH = estado.habitosRuins.filter(h => h.statusHoje === "falha" && !h.penalidadeCumprida && !h.protegido).map(h => ({ id: h.id, nome: h.nome, punicao: h.tipoPenalidade, origem: 'habito' as const, dificuldade: 'normal' as NivelDificuldade }));
+    const pM = estadoSeguro.missoesDiarias.filter(m => m.estado === "falha" && !m.penalidadeCumprida && !m.protegida).map(m => ({ id: m.id, nome: m.nome, punicao: m.tipoPenalidade, origem: 'missao' as const, dificuldade: m.dificuldade }));
+    const pH = estadoSeguro.habitosRuins.filter(h => h.statusHoje === "falha" && !h.penalidadeCumprida && !h.protegido).map(h => ({ id: h.id, nome: h.nome, punicao: h.tipoPenalidade, origem: 'habito' as const, dificuldade: 'normal' as NivelDificuldade }));
     return [...pM, ...pH];
   }, [estado.missoesDiarias, estado.habitosRuins]);
 
   const penalidadesCumpridas = useMemo(() => {
-    const pM = estado.missoesDiarias.filter(m => m.estado === "falha" && m.penalidadeCumprida).map(m => ({ id: m.id, nome: m.nome, punicao: m.tipoPenalidade, origem: 'missao' as const }));
-    const pH = estado.habitosRuins.filter(h => h.statusHoje === "falha" && h.penalidadeCumprida).map(h => ({ id: h.id, nome: h.nome, punicao: h.tipoPenalidade, origem: 'habito' as const }));
+    const pM = estadoSeguro.missoesDiarias.filter(m => m.estado === "falha" && m.penalidadeCumprida).map(m => ({ id: m.id, nome: m.nome, punicao: m.tipoPenalidade, origem: 'missao' as const }));
+    const pH = estadoSeguro.habitosRuins.filter(h => h.statusHoje === "falha" && h.penalidadeCumprida).map(h => ({ id: h.id, nome: h.nome, punicao: h.tipoPenalidade, origem: 'habito' as const }));
     return [...pM, ...pH];
   }, [estado.missoesDiarias, estado.habitosRuins]);
 
@@ -602,7 +617,7 @@ useEffect(() => {
                {mDif === 'epico' && epicaAtiva && <p className="text-[9px] text-rose-500 font-bold text-center mt-3 animate-pulse uppercase">Você já possui uma missão Lendária ativa no momento.</p>}
             </Card>
             <div className="space-y-4">
-              {estado.missoesDiarias.map(m => (
+              {estadoSeguro.missoesDiarias.map(m => (
                 <Card key={m.id} className={`${m.estado === "concluida" ? 'opacity-50 scale-[0.98]' : m.estado === "falha" ? 'border-rose-950 bg-rose-950/5' : DIFICULDADES[m.dificuldade].sombra} transition-all duration-500 overflow-hidden`}>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div className="flex-1 space-y-1">
@@ -663,7 +678,7 @@ useEffect(() => {
                </div>
             </Card>
             <div className="grid grid-cols-1 gap-4">
-              {estado.quests.map(q => (
+              {estadoSeguro.quests.map(q => (
                 <Card key={q.id} className={`${q.concluida ? 'opacity-40 grayscale scale-[0.97]' : DIFICULDADES[q.dificuldade].sombra} py-4 interactive`}>
                   <div className="flex justify-between items-center">
                      <div className="flex items-center gap-3">
@@ -695,7 +710,7 @@ useEffect(() => {
                <div className="flex justify-end mt-8 border-t border-amber-900/10 pt-6"><BotaoRPG onClick={() => { if(meNom && Number(meTot) > 0) { setEstado(p => ({ ...p, metas: [...p.metas, { id: Math.random().toString(36).substr(2, 9), nome: meNom, total: Number(meTot), unidade: meUni, progresso: 0, concluida: false, dataInicio: meIni || undefined, dataFim: meFim || undefined }] })); setMeNom(""); setMeTot(""); setMeUni(""); setMeIni(""); setMeFim(""); } }}>Firmar Acordo</BotaoRPG></div>
             </Card>
             <div className="space-y-6">
-              {estado.metas.map(meta => (
+              {estadoSeguro.metas.map(meta => (
                 <Card key={meta.id} className={`${meta.concluida ? 'opacity-50 grayscale' : 'shadow-blue-900/5'}`}>
                   {metaEditId === meta.id ? (
                     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -785,7 +800,7 @@ useEffect(() => {
            <div className="flex justify-end pt-4"><BotaoRPG onClick={() => { if(eNom && eDat) { setEstado(p => ({ ...p, eventos: [...p.eventos, { id: Math.random().toString(36).substr(2, 9), nome: eNom, descricao: eDes, data: eDat, diasAntesLembrete: eAnt, status: "pendente" }] })); setENom(""); setEDat(""); setEAnt(1); setEDes(""); } }}>Agendar</BotaoRPG></div>
         </Card>
         <div className="grid grid-cols-1 gap-4 max-w-4xl mx-auto">
-          {estado.eventos.map(e => (
+          {estadoSeguro.eventos.map(e => (
             <Card key={e.id} className={`${e.status === "concluido" ? "opacity-40 grayscale" : "border-stone-800"}`}>
                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                   <div className="flex-1"><div className="flex items-center gap-3 mb-1"><h4 className="text-xl font-rpg tracking-wider text-stone-100">{e.nome}</h4><span className="text-[10px] font-bold text-sky-400 bg-sky-900/10 px-2 rounded-full border border-sky-900/20">{e.data}</span></div><p className="text-stone-500 text-xs italic">{e.descricao || 'Sem detalhes.'}</p></div>
@@ -855,7 +870,7 @@ useEffect(() => {
 
         {abaLoja === 'emporio' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto px-4 animate-in fade-in slide-in-from-left-4 duration-500">
-            {estado.itensLoja.map(item => (
+            {estadoSeguro.itensLoja.map(item => (
               <Card key={item.id} className="flex flex-col h-full border-amber-900/10 interactive group">
                 <div className="relative mb-6">
                   <div className="w-full aspect-square rounded-2xl bg-stone-950 border border-stone-800 flex items-center justify-center text-5xl shadow-inner group-hover:border-amber-500/30 transition-all">
@@ -898,7 +913,7 @@ useEffect(() => {
 
             <div className="space-y-3">
               <h4 className="text-[10px] text-stone-500 font-bold uppercase tracking-widest ml-2">Lista de Itens Disponíveis</h4>
-              {estado.itensLoja.map(item => (
+              {estadoSeguro.itensLoja.map(item => (
                 <div key={item.id} className="flex items-center justify-between bg-stone-900/50 border border-stone-800 p-4 rounded-2xl group hover:border-stone-600 transition-all">
                   <div className="flex items-center gap-4">
                     <span className="text-2xl">{item.categoria === 'alivio' ? '✨' : '🎁'}</span>
@@ -926,7 +941,7 @@ useEffect(() => {
       {estado.protecaoAtiva && (<div className="max-w-xl mx-auto mb-10"><div className="bg-sky-950/20 border-2 border-sky-600/30 p-5 rounded-2xl text-center shadow-[0_0_20px_rgba(2,132,199,0.1)] flex items-center justify-center gap-4 animate-pulse"><span className="text-3xl">🛡️</span><div><p className="text-sky-200 text-xs font-bold uppercase tracking-[0.2em]">Manto da Providência Ativo</p></div></div></div>)}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 max-w-6xl mx-auto px-4">
         {estado.inventario.length === 0 && <p className="text-stone-700 italic text-center py-20 w-full col-span-full">Sua mochila está vazia.</p>}
-        {estado.inventario.map(invItem => {
+        {estadoSeguro.inventario.map(invItem => {
           const base = estado.itensLoja.find(i => i.id === invItem.itemId);
           const icon = base?.categoria === 'alivio' ? '✨' : '🎁';
           return (
