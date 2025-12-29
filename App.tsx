@@ -165,6 +165,7 @@ const ITENS_PADRAO: ItemLoja[] = [
 ];
 
 const initialState: EstadoJogo = {
+  version: 1,
   telaAtual: "jornada",
   abaAtivaMissoes: 'diarias',
   missoesDiarias: [],
@@ -262,30 +263,33 @@ useEffect(() => {
       console.error('Erro ao inicializar jogador:', error);
     }
 
-    // 1️⃣ tenta carregar da nuvem
-    const remoteState = await loadRemoteState(playerId);
-    if (remoteState) {
-      const estadoSeguro = {
-        ...initialState,
-        ...remoteState,
-      };
+    // tenta carregar estado da nuvem
+const remoteState = await loadRemoteState(playerId);
 
-      setEstado(estadoSeguro);
-      saveLocalState(estadoSeguro);
-      return;
-    }
+if (remoteState) {
+  const estadoComVersionamento = {
+    ...initialState,
+    ...remoteState,
+    version: initialState.version
+  };
 
-    // 2️⃣ fallback local
-    const localState = loadLocalState();
-    if (localState) {
-      const estadoSeguro = {
-        ...initialState,
-        ...localState,
-      };
+  setEstado(estadoComVersionamento);
+  saveLocalState(estadoComVersionamento);
+  return;
+}
 
-      setEstado(estadoSeguro);
-      await saveRemoteState(playerId, estadoSeguro);
-    }
+// fallback para localStorage
+const localState = loadLocalState();
+if (localState) {
+  const estadoComVersionamento = {
+    ...initialState,
+    ...localState,
+    version: initialState.version
+  };
+
+  setEstado(estadoComVersionamento);
+  await saveRemoteState(playerId, estadoComVersionamento);
+}
   };
 
   init();
