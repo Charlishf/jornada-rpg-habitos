@@ -224,7 +224,8 @@ const ProgressoBar: React.FC<{ percent: number; cor?: string; small?: boolean }>
 
 export default function App() {
 const [estado, setEstado] = useState<EstadoJogo>(initialState);
-  const estadoSeguro = useMemo(() => ({
+const [carregado, setCarregado] = useState(false);
+const estadoSeguro = useMemo(() => ({
   ...estado,
   missoesDiarias: estado.missoesDiarias ?? [],
   quests: estado.quests ?? [],
@@ -245,7 +246,6 @@ useEffect(() => {
   const init = async () => {
     const playerId = getOrCreatePlayerId();
 
-    // garante que o perfil existe
     const { data, error } = await supabase
       .from('profiles')
       .select('id, data')
@@ -263,43 +263,49 @@ useEffect(() => {
       console.error('Erro ao inicializar jogador:', error);
     }
 
-    // tenta carregar estado da nuvem
-const remoteState = await loadRemoteState(playerId);
+    // 1️⃣ tenta nuvem
+    const remoteState = await loadRemoteState(playerId);
 
-if (remoteState) {
-  const estadoComVersionamento = {
-    ...initialState,
-    ...remoteState,
-    version: initialState.version
-  };
+    if (remoteState) {
+      const estadoFinal = {
+        ...initialState,
+        ...remoteState,
+        version: initialState.version
+      };
+      setEstado(estadoFinal);
+      saveLocalState(estadoFinal);
+      setCarregado(true);
+      return;
+    }
 
-  setEstado(estadoComVersionamento);
-  saveLocalState(estadoComVersionamento);
-  return;
-}
+    // 2️⃣ fallback local
+    const localState = loadLocalState();
+    if (localState) {
+      const estadoFinal = {
+        ...initialState,
+        ...localState,
+        version: initialState.version
+      };
+      setEstado(estadoFinal);
+      await saveRemoteState(playerId, estadoFinal);
+      setCarregado(true);
+      return;
+    }
 
-// fallback para localStorage
-const localState = loadLocalState();
-if (localState) {
-  const estadoComVersionamento = {
-    ...initialState,
-    ...localState,
-    version: initialState.version
-  };
-
-  setEstado(estadoComVersionamento);
-  await saveRemoteState(playerId, estadoComVersionamento);
-}
+    // 3️⃣ nenhum estado encontrado
+    setCarregado(true);
   };
 
   init();
 }, []);
 
 useEffect(() => {
+  if (!carregado) return;
+
   const playerId = getOrCreatePlayerId();
   saveLocalState(estado);
   saveRemoteState(playerId, estado);
-}, [estado]);
+}, [estado, carregado]);
 
   useEffect(() => {
     if (ultimoFeedback) {
