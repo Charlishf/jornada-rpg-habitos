@@ -222,29 +222,7 @@ const ProgressoBar: React.FC<{ percent: number; cor?: string; small?: boolean }>
 );
 
 export default function App() {
-  const [estado, setEstado] = useState<EstadoJogo>(() => {
-  const estadoSeguro = useMemo(() => ({
-  ...estadoSeguro,
-  missoesDiarias: estado.missoesDiarias ?? [],
-  quests: estado.quests ?? [],
-  metas: estado.metas ?? [],
-  penalidades: estado.penalidades ?? [],
-  eventos: estado.eventos ?? [],
-  itensLoja: estado.itensLoja ?? [],
-  inventario: estado.inventario ?? [],
-  habitosRuins: estado.habitosRuins ?? [],
-  conquistas: estado.conquistas ?? []
-}), [estado]);
-
-    const salvo = localStorage.getItem(CHAVE_STORAGE);
-    if (!salvo) return initialState;
-    try {
-      const parsed = JSON.parse(salvo);
-      return { ...initialState, ...parsed };
-    } catch (e) {
-      return initialState;
-    }
-  });
+const [estado, setEstado] = useState<EstadoJogo>(initialState);
 
   const [ultimoFeedback, setUltimoFeedback] = useState<string | null>(null);
   const [modalItemUso, setModalItemUso] = useState<{ idUnique: string; tipo: TipoEfeito } | null>(null);
