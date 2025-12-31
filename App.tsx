@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from './supabase';
+import { User } from '@supabase/supabase-js';
 import { getOrCreatePlayerId } from './player';
 import { loadLocalState, loadRemoteState, saveLocalState, saveRemoteState } from './persistence';
 
@@ -224,6 +225,14 @@ const ProgressoBar: React.FC<{ percent: number; cor?: string; small?: boolean }>
 
 export default function App() {
 const [estado, setEstado] = useState<EstadoJogo>(initialState);
+// --- Estados de autenticação (login opcional) ---
+const [usuarioLogado, setUsuarioLogado] = useState<User | null>(null);
+const [carregandoAuth, setCarregandoAuth] = useState(true);
+
+const [email, setEmail] = useState('');
+const [senha, setSenha] = useState('');
+const [erroAuth, setErroAuth] = useState<string | null>(null);
+
 const [carregado, setCarregado] = useState(false);
 const estadoSeguro = useMemo(() => ({
   ...estado,
@@ -238,6 +247,37 @@ const estadoSeguro = useMemo(() => ({
   conquistas: estado.conquistas ?? []
 }), [estado]);
 
+// --- Autenticação ---
+async function entrar() {
+  setErroAuth(null);
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password: senha
+  });
+
+  if (error) {
+    setErroAuth(error.message);
+  }
+}
+
+async function criarConta() {
+  setErroAuth(null);
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password: senha
+  });
+
+  if (error) {
+    setErroAuth(error.message);
+  }
+}
+
+async function sair() {
+  await supabase.auth.signOut();
+  setUsuarioLogado(null);
+}
 
   const [ultimoFeedback, setUltimoFeedback] = useState<string | null>(null);
   const [modalItemUso, setModalItemUso] = useState<{ idUnique: string; tipo: TipoEfeito } | null>(null);
@@ -313,6 +353,27 @@ useEffect(() => {
       return () => clearTimeout(timer);
     }
   }, [ultimoFeedback]);
+
+  // --- Autenticação: detectar sessão ativa ---
+useEffect(() => {
+  const initAuth = async () => {
+    const { data } = await supabase.auth.getSession();
+    setUsuarioLogado(data.session?.user ?? null);
+    setCarregandoAuth(false);
+  };
+
+  initAuth();
+
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      setUsuarioLogado(session?.user ?? null);
+    }
+  );
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
 
   /**
    * CÁLCULOS DE PROGRESSÃO E ECONOMIA
@@ -966,39 +1027,147 @@ useEffect(() => {
     </button>
   );
 
-  return (
-    <div className="min-h-screen pb-40 text-stone-200 bg-stone-950 font-sans overflow-x-hidden selection:bg-amber-900/50 selection:text-amber-100">
-      {ultimoFeedback && (<div className="fixed top-28 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-lg animate-in fade-in slide-in-from-top-6 duration-500"><div className="bg-stone-900/90 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center gap-5"><div className="w-12 h-12 rounded-2xl bg-amber-900/30 border border-amber-500/20 flex items-center justify-center text-2xl">⚡</div><p className="text-amber-50 text-xs font-bold italic tracking-wide font-rpg uppercase tracking-widest">{ultimoFeedback}</p></div></div>)}
-      <header className="sticky top-0 z-50 bg-stone-950/90 backdrop-blur-2xl border-b border-amber-900/20 px-8 py-5 shadow-2xl">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="relative"><div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-900 to-amber-700 flex items-center justify-center font-bold text-amber-50 font-rpg text-2xl shadow-[0_0_20px_rgba(120,53,15,0.4)] border-2 border-amber-500/30">{nivelHeroi}</div><div className="absolute -top-2 -right-2 bg-stone-950 border border-amber-500/40 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md text-amber-400">Lv</div></div>
-            <div className="hidden sm:block"><p className="text-[9px] uppercase text-stone-600 font-bold tracking-[0.4em] mb-1.5 leading-none">Herói do Alvorecer</p><h1 className="text-sm font-rpg text-amber-200 uppercase tracking-[0.2em]">{LISTA_CLASSES.find(c => c.id === estado.classeId)?.nome || 'Iniciado'}</h1></div>
+ return (
+  <div className="min-h-screen bg-stone-950 text-stone-200 font-sans">
+
+    {carregandoAuth ? (
+
+      // ⏳ CARREGANDO AUTENTICAÇÃO
+      <div className="min-h-screen flex items-center justify-center font-rpg tracking-widest text-stone-400">
+        Conectando aos pergaminhos do destino...
+      </div>
+
+    ) : usuarioLogado ? (
+
+      // 🎮 APP NORMAL (JOGO)
+      <div className="min-h-screen pb-40 text-stone-200 bg-stone-950 font-sans overflow-x-hidden selection:bg-amber-900/50 selection:text-amber-100">
+
+        {ultimoFeedback && (
+          <div className="fixed top-28 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-lg animate-in fade-in slide-in-from-top-6 duration-500">
+            <div className="bg-stone-900/90 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-5 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-900/30 border border-amber-500/20 flex items-center justify-center text-2xl">
+                ⚡
+              </div>
+              <p className="text-amber-50 text-xs font-bold italic font-rpg uppercase tracking-widest">
+                {ultimoFeedback}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="flex flex-col items-end hidden md:flex"><div className="flex justify-between w-32 mb-1"><span className="text-[8px] font-bold text-stone-500 uppercase">XP</span><span className="text-[8px] font-bold text-amber-400">{xpNivel}%</span></div><div className="w-32"><ProgressoBar percent={xpNivel} small /></div></div>
-            <div className="flex items-center space-x-4 bg-stone-900/60 px-6 py-3 rounded-2xl border border-amber-900/10 transition-all hover:border-amber-500/30"><span className="text-2xl transition-transform group-hover:scale-110">🪙</span><span className="text-xl font-bold text-yellow-500 font-rpg tracking-[0.2em] tabular-nums">{moedasAtuais}</span></div>
+        )}
+
+        {/* HEADER */}
+        <header className="sticky top-0 z-50 bg-stone-950/90 backdrop-blur-2xl border-b border-amber-900/20 px-8 py-5 shadow-2xl">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center space-x-6">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-900 to-amber-700 flex items-center justify-center font-bold text-amber-50 font-rpg text-2xl shadow-[0_0_20px_rgba(120,53,15,0.4)] border-2 border-amber-500/30">
+                  {nivelHeroi}
+                </div>
+                <div className="absolute -top-2 -right-2 bg-stone-950 border border-amber-500/40 text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md text-amber-400">
+                  Lv
+                </div>
+              </div>
+
+              <div className="hidden sm:block">
+                <p className="text-[9px] uppercase text-stone-600 font-bold tracking-[0.4em] mb-1.5">
+                  Herói do Alvorecer
+                </p>
+                <h1 className="text-sm font-rpg text-amber-200 uppercase tracking-[0.2em]">
+                  {LISTA_CLASSES.find(c => c.id === estado.classeId)?.nome || 'Iniciado'}
+                </h1>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="hidden md:flex flex-col items-end">
+                <div className="flex justify-between w-32 mb-1">
+                  <span className="text-[8px] font-bold text-stone-500 uppercase">XP</span>
+                  <span className="text-[8px] font-bold text-amber-400">{xpNivel}%</span>
+                </div>
+                <div className="w-32">
+                  <ProgressoBar percent={xpNivel} small />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4 bg-stone-900/60 px-6 py-3 rounded-2xl border border-amber-900/10">
+                <span className="text-2xl">🪙</span>
+                <span className="text-xl font-bold text-yellow-500 font-rpg tracking-[0.2em]">
+                  {moedasAtuais}
+                </span>
+              </div>
+            </div>
           </div>
+        </header>
+
+        {/* CONTEÚDO PRINCIPAL */}
+        <main className="max-w-6xl mx-auto p-6 md:p-10 w-full animate-in fade-in duration-1000">
+          {estado.telaAtual === 'jornada' && <RenderJornada />}
+          {estado.telaAtual === 'missoes' && <RenderMissoes />}
+          {estado.telaAtual === 'habitos' && <RenderHabitos />}
+          {estado.telaAtual === 'penalidades' && <RenderPenalidades />}
+          {estado.telaAtual === 'loja' && <RenderLoja />}
+          {estado.telaAtual === 'eventos' && <RenderEventos />}
+          {estado.telaAtual === 'inventario' && <RenderInventario />}
+        </main>
+
+        {/* NAVEGAÇÃO */}
+        <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl bg-stone-900/90 backdrop-blur-3xl border border-amber-900/30 z-50 h-24 flex items-center justify-around px-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+          <NavButton a={estado.telaAtual === 'jornada'} o={() => setEstado(p => ({ ...p, telaAtual: 'jornada' }))} l="Herói" i="⚔️" />
+          <NavButton a={estado.telaAtual === 'missoes'} o={() => setEstado(p => ({ ...p, telaAtual: 'missoes' }))} l="Quests" i="📜" />
+          <NavButton a={estado.telaAtual === 'inventario'} o={() => setEstado(p => ({ ...p, telaAtual: 'inventario' }))} l="Mochila" i="🎒" />
+          <NavButton a={estado.telaAtual === 'eventos'} o={() => setEstado(p => ({ ...p, telaAtual: 'eventos' }))} l="Crônica" i="📅" />
+          <NavButton a={estado.telaAtual === 'habitos'} o={() => setEstado(p => ({ ...p, telaAtual: 'habitos' }))} l="Vigia" i="🚫" />
+          <NavButton a={estado.telaAtual === 'penalidades'} o={() => setEstado(p => ({ ...p, telaAtual: 'penalidades' }))} l="Almas" i="⚖️" />
+          <NavButton a={estado.telaAtual === 'loja'} o={() => setEstado(p => ({ ...p, telaAtual: 'loja' }))} l="Loja" i="💰" />
+        </nav>
+
+      </div>
+
+    ) : (
+
+      // 🔐 TELA DE LOGIN
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-stone-900 border border-stone-700 rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-4">
+
+          <h1 className="font-rpg text-xl text-center text-amber-400 uppercase tracking-widest">
+            Crônicas da Alvorada
+          </h1>
+
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
+          />
+
+          <input
+            type="password"
+            placeholder="Senha"
+            value={senha}
+            onChange={e => setSenha(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
+          />
+
+          {erroAuth && (
+            <div className="text-rose-400 text-sm text-center">
+              {erroAuth}
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-center pt-2">
+            <BotaoRPG onClick={entrar}>
+              Entrar
+            </BotaoRPG>
+            <BotaoRPG variant="secondary" onClick={criarConta}>
+              Criar Conta
+            </BotaoRPG>
+          </div>
+
         </div>
-      </header>
-      <main className="max-w-6xl mx-auto p-6 md:p-10 w-full animate-in fade-in duration-1000">
-        {estado.telaAtual === 'jornada' && <RenderJornada />}
-        {estado.telaAtual === 'missoes' && <RenderMissoes />}
-        {estado.telaAtual === 'habitos' && <RenderHabitos />}
-        {estado.telaAtual === 'penalidades' && <RenderPenalidades />}
-        {estado.telaAtual === 'loja' && <RenderLoja />}
-        {estado.telaAtual === 'eventos' && <RenderEventos />}
-        {estado.telaAtual === 'inventario' && <RenderInventario />}
-      </main>
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl bg-stone-900/90 backdrop-blur-3xl border border-amber-900/30 z-50 h-24 flex items-center justify-around px-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-        <NavButton a={estado.telaAtual === 'jornada'} o={() => setEstado(p => ({ ...p, telaAtual: 'jornada' }))} l="Herói" i="⚔️" />
-        <NavButton a={estado.telaAtual === 'missoes'} o={() => setEstado(p => ({ ...p, telaAtual: 'missoes' }))} l="Quests" i="📜" />
-        <NavButton a={estado.telaAtual === 'inventario'} o={() => setEstado(p => ({ ...p, telaAtual: 'inventario' }))} l="Mochila" i="🎒" />
-        <NavButton a={estado.telaAtual === 'eventos'} o={() => setEstado(p => ({ ...p, telaAtual: 'eventos' }))} l="Crônica" i="📅" />
-        <NavButton a={estado.telaAtual === 'habitos'} o={() => setEstado(p => ({ ...p, telaAtual: 'habitos' }))} l="Vigia" i="🚫" />
-        <NavButton a={estado.telaAtual === 'penalidades'} o={() => setEstado(p => ({ ...p, telaAtual: 'penalidades' }))} l="Almas" i="⚖️" />
-        <NavButton a={estado.telaAtual === 'loja'} o={() => setEstado(p => ({ ...p, telaAtual: 'loja' }))} l="Loja" i="💰" />
-      </nav>
-    </div>
-  );
-}
+      </div>
+
+    )}
+
+  </div>
+);
