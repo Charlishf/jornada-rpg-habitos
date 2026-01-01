@@ -289,17 +289,37 @@ async function recuperarSenha() {
 async function criarConta() {
   setErroAuth(null);
 
-  const { error } = await supabase.auth.signUp({
+  if (!email) {
+    setErroAuth('Digite um email válido.');
+    return;
+  }
+
+  if (!senha) {
+    setErroAuth('Digite uma senha para criar sua conta.');
+    return;
+  }
+
+  const { data, error } = await supabase.auth.signUp({
     email,
     password: senha
   });
 
   if (error) {
-    if (error.message.includes('already registered')) {
-      setErroAuth('Este email já possui uma conta. Use "Entrar" ou "Esqueceu a senha".');
+    if (error.message.toLowerCase().includes('already')) {
+      setErroAuth(
+        'Este email já está cadastrado. Use "Entrar" ou "Esqueceu a senha".'
+      );
     } else {
       setErroAuth(error.message);
     }
+    return;
+  }
+
+  // 👇 CASO CLÁSSICO: email já existe, mas Supabase não retorna erro
+  if (!data?.user) {
+    setErroAuth(
+      'Este email já está cadastrado. Use "Entrar" ou "Esqueceu a senha".'
+    );
     return;
   }
 
