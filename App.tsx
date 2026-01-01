@@ -228,6 +228,8 @@ const [estado, setEstado] = useState<EstadoJogo>(initialState);
 // --- Estados de autenticação (login opcional) ---
 const [usuarioLogado, setUsuarioLogado] = useState<User | null>(null);
 const [carregandoAuth, setCarregandoAuth] = useState(true);
+const [modoRecuperacao, setModoRecuperacao] = useState(false);
+const [novaSenha, setNovaSenha] = useState('');
 
 const [email, setEmail] = useState('');
 const [senha, setSenha] = useState('');
@@ -286,6 +288,25 @@ async function recuperarSenha() {
   }
 }
 
+async function redefinirSenha() {
+  if (!novaSenha) {
+    setErroAuth('Digite a nova senha.');
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: novaSenha
+  });
+
+  if (error) {
+    setErroAuth('Erro ao redefinir a senha.');
+  } else {
+    setErroAuth('Senha alterada com sucesso. Faça login novamente.');
+    setModoRecuperacao(false);
+    await supabase.auth.signOut();
+  }
+}
+  
 async function criarConta() {
   setErroAuth(null);
 
@@ -410,17 +431,17 @@ useEffect(() => {
 
   // --- Autenticação: detectar sessão ativa ---
 useEffect(() => {
-  const initAuth = async () => {
-    const { data } = await supabase.auth.getSession();
-    setUsuarioLogado(data.session?.user ?? null);
-    setCarregandoAuth(false);
-  };
-
-  initAuth();
-
   const { data: listener } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
+    (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setModoRecuperacao(true);
+        setUsuarioLogado(session?.user ?? null);
+        setCarregandoAuth(false);
+        return;
+      }
+
       setUsuarioLogado(session?.user ?? null);
+      setCarregandoAuth(false);
     }
   );
 
@@ -1089,6 +1110,49 @@ useEffect(() => {
       // ⏳ CARREGANDO AUTENTICAÇÃO
       <div className="min-h-screen flex items-center justify-center font-rpg tracking-widest text-stone-400">
         Conectando aos pergaminhos do destino...
+      </div>
+
+      ) : modoRecuperacao ? (
+
+      // 🔑 RECUPERAÇÃO DE SENHA
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-stone-900 p-8 rounded-2xl border border-amber-500/30 w-full max-w-md">
+          <h2 className="font-rpg text-amber-300 text-center mb-4">
+            Redefinir Senha
+          </h2>
+
+          <input
+            type="password"
+            placeholder="Nova senha"
+            value={novaSenha}
+            onChange={(e) => setNovaSenha(e.target.value)}
+            className="w-full mb-4 px-4 py-2 rounded bg-stone-800 border border-stone-700 text-stone-200"
+          />
+
+          <BotaoRPG
+            onClick={async () => {
+              const { error } = await supabase.auth.updateUser({
+                password: novaSenha,
+              });
+
+              if (error) {
+                setErroAuth(error.message);
+              } else {
+                setModoRecuperacao(false);
+                setNovaSenha('');
+                alert('Senha alterada com sucesso!');
+              }
+            }}
+          >
+            Salvar nova senha
+          </BotaoRPG>
+
+          {erroAuth && (
+            <p className="text-rose-400 text-xs mt-3 text-center">
+              {erroAuth}
+            </p>
+          )}
+        </div>
       </div>
 
     ) : usuarioLogado ? (
