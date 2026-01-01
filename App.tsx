@@ -257,9 +257,16 @@ async function entrar() {
   });
 
   if (error) {
-    setErroAuth(error.message);
+    if (error.message.includes('Email not confirmed')) {
+      setErroAuth('Confirme seu email antes de entrar.');
+    } else if (error.message.includes('Invalid login')) {
+      setErroAuth('Email ou senha incorretos.');
+    } else {
+      setErroAuth(error.message);
+    }
   }
 }
+
 
 async function criarConta() {
   setErroAuth(null);
@@ -270,8 +277,17 @@ async function criarConta() {
   });
 
   if (error) {
-    setErroAuth(error.message);
+    if (error.message.includes('already registered')) {
+      setErroAuth('Este email já está cadastrado. Tente entrar.');
+    } else {
+      setErroAuth(error.message);
+    }
+    return;
   }
+
+  setErroAuth(
+    'Conta criada! Verifique seu email para confirmar antes de entrar.'
+  );
 }
 
 async function sair() {
@@ -1095,6 +1111,9 @@ useEffect(() => {
                   {moedasAtuais}
                 </span>
               </div>
+  <BotaoRPG variant="secondary" onClick={sair}>
+  Sair
+</BotaoRPG>
             </div>
           </div>
         </header>
