@@ -267,6 +267,24 @@ async function entrar() {
   }
 }
 
+async function recuperarSenha() {
+  setErroAuth(null);
+
+  if (!email) {
+    setErroAuth('Digite seu email para recuperar a senha.');
+    return;
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin
+  });
+
+  if (error) {
+    setErroAuth('Erro ao enviar email de recuperação.');
+  } else {
+    setErroAuth('Email de recuperação enviado. Verifique sua caixa de entrada.');
+  }
+}
 
 async function criarConta() {
   setErroAuth(null);
@@ -278,7 +296,7 @@ async function criarConta() {
 
   if (error) {
     if (error.message.includes('already registered')) {
-      setErroAuth('Este email já está cadastrado. Tente entrar.');
+      setErroAuth('Este email já possui uma conta. Use "Entrar" ou "Esqueceu a senha".');
     } else {
       setErroAuth(error.message);
     }
@@ -1182,6 +1200,12 @@ useEffect(() => {
               Criar Conta
             </BotaoRPG>
           </div>
+      <button
+  onClick={recuperarSenha}
+  className="w-full text-xs text-amber-400 hover:text-amber-300 underline text-center mt-2"
+>
+  Esqueceu a senha?
+</button>
 
         </div>
       </div>
