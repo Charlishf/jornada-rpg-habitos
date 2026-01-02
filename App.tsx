@@ -1116,16 +1116,17 @@ useEffect(() => {
  return (
   <div className="min-h-screen bg-stone-950 text-stone-200 font-sans">
 
-    {carregandoAuth ? (
+{carregandoAuth ? (
 
-      // ⏳ CARREGANDO AUTENTICAÇÃO
+  {/* ⏳ CARREGANDO AUTENTICAÇÃO */}
+  <div className="min-h-screen flex items-center justify-center">
       <div className="min-h-screen flex items-center justify-center font-rpg tracking-widest text-stone-400">
         Conectando aos pergaminhos do destino...
       </div>
 
       ) : modoRecuperacao ? (
 
-      // 🔑 RECUPERAÇÃO DE SENHA
+  {/* 🔑 RECUPERAÇÃO DE SENHA */}
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-stone-900 p-8 rounded-2xl border border-amber-500/30 w-full max-w-md">
           <h2 className="font-rpg text-amber-300 text-center mb-4">
@@ -1168,7 +1169,7 @@ useEffect(() => {
 
     ) : usuarioLogado ? (
 
-      // 🎮 APP NORMAL (JOGO)
+   {/* 🎮 APP NORMAL (JOGO) */}
       <div className="min-h-screen pb-40 text-stone-200 bg-stone-950 font-sans overflow-x-hidden selection:bg-amber-900/50 selection:text-amber-100">
 
         {ultimoFeedback && (
@@ -1257,7 +1258,7 @@ useEffect(() => {
 
     ) : (
 
-      // 🔐 TELA DE LOGIN
+{/* 🔐 TELA DE LOGIN */}
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-stone-900 border border-stone-700 rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-4">
 
@@ -1308,5 +1309,7 @@ useEffect(() => {
     )}
 
   </div>
-);
+  );
 }
+
+export default App;
