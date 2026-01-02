@@ -1118,58 +1118,60 @@ useEffect(() => {
 
 {carregandoAuth ? (
 
-  {/* ⏳ CARREGANDO AUTENTICAÇÃO */}
   <div className="min-h-screen flex items-center justify-center">
-      <div className="min-h-screen flex items-center justify-center font-rpg tracking-widest text-stone-400">
-        Conectando aos pergaminhos do destino...
-      </div>
+    {/* ⏳ CARREGANDO AUTENTICAÇÃO */}
+    <div className="min-h-screen flex items-center justify-center font-rpg tracking-widest text-stone-400">
+      Conectando aos pergaminhos do destino...
+    </div>
+  </div>
 
-      ) : modoRecuperacao ? (
+) : modoRecuperacao ? (
 
-  {/* 🔑 RECUPERAÇÃO DE SENHA */}
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-stone-900 p-8 rounded-2xl border border-amber-500/30 w-full max-w-md">
-          <h2 className="font-rpg text-amber-300 text-center mb-4">
-            Redefinir Senha
-          </h2>
+    <div className="min-h-screen flex items-center justify-center">
+    {/* 🔑 RECUPERAÇÃO DE SENHA */}
+    <div className="bg-stone-900 p-8 rounded-2xl border border-amber-500/30 w-full max-w-md">
+      <h2 className="font-rpg text-amber-300 text-center mb-4">
+        Redefinir Senha
+      </h2>
 
-          <input
-            type="password"
-            placeholder="Nova senha"
-            value={novaSenha}
-            onChange={(e) => setNovaSenha(e.target.value)}
-            className="w-full mb-4 px-4 py-2 rounded bg-stone-800 border border-stone-700 text-stone-200"
-          />
+      <input
+        type="password"
+        placeholder="Nova senha"
+        value={novaSenha}
+        onChange={(e) => setNovaSenha(e.target.value)}
+        className="w-full mb-4 px-4 py-2 rounded bg-stone-800 border border-stone-700 text-stone-200"
+      />
 
-          <BotaoRPG
-            onClick={async () => {
-              const { error } = await supabase.auth.updateUser({
-                password: novaSenha,
-              });
+      <BotaoRPG
+        onClick={async () => {
+          const { error } = await supabase.auth.updateUser({
+            password: novaSenha,
+          });
 
-              if (error) {
-                setErroAuth(error.message);
-              } else {
-                setModoRecuperacao(false);
-                setNovaSenha('');
-                alert('Senha alterada com sucesso!');
-              }
-            }}
-          >
-            Salvar nova senha
-          </BotaoRPG>
+          if (error) {
+            setErroAuth(error.message);
+          } else {
+            setModoRecuperacao(false);
+            setNovaSenha('');
+            alert('Senha alterada com sucesso!');
+          }
+        }}
+      >
+        Salvar nova senha
+      </BotaoRPG>
 
-          {erroAuth && (
-            <p className="text-rose-400 text-xs mt-3 text-center">
-              {erroAuth}
-            </p>
-          )}
-        </div>
-      </div>
+      {erroAuth && (
+        <p className="text-rose-400 text-xs mt-3 text-center">
+          {erroAuth}
+        </p>
+      )}
+    </div>
+  </div>
 
-    ) : usuarioLogado ? (
+) : usuarioLogado ? (
 
-   {/* 🎮 APP NORMAL (JOGO) */}
+  <div className="min-h-screen pb-40 text-stone-200 bg-stone-950 font-sans overflow-x-hidden selection:bg-amber-900/50 selection:text-amber-100"> 
+  {/* 🎮 APP NORMAL (JOGO) */}
       <div className="min-h-screen pb-40 text-stone-200 bg-stone-950 font-sans overflow-x-hidden selection:bg-amber-900/50 selection:text-amber-100">
 
         {ultimoFeedback && (
@@ -1258,55 +1260,55 @@ useEffect(() => {
 
     ) : (
 
-{/* 🔐 TELA DE LOGIN */}
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-stone-900 border border-stone-700 rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-4">
+  <div className="min-h-screen flex items-center justify-center">
+    {/* 🔐 TELA DE LOGIN */}
+    <div className="bg-stone-900 border border-stone-700 rounded-3xl p-8 w-full max-w-md shadow-2xl space-y-4">
 
-          <h1 className="font-rpg text-xl text-center text-amber-400 uppercase tracking-widest">
-            Crônicas da Alvorada
-          </h1>
+      <h1 className="font-rpg text-xl text-center text-amber-400 uppercase tracking-widest">
+        Crônicas da Alvorada
+      </h1>
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
-          />
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
+      />
 
-          <input
-            type="password"
-            placeholder="Senha"
-            value={senha}
-            onChange={e => setSenha(e.target.value)}
-            className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
-          />
+      <input
+        type="password"
+        placeholder="Senha"
+        value={senha}
+        onChange={e => setSenha(e.target.value)}
+        className="w-full px-4 py-2 rounded-lg bg-stone-950 border border-stone-700 text-stone-100"
+      />
 
-          {erroAuth && (
-            <div className="text-rose-400 text-sm text-center">
-              {erroAuth}
-            </div>
-          )}
-
-          <div className="flex gap-3 justify-center pt-2">
-            <BotaoRPG onClick={entrar}>
-              Entrar
-            </BotaoRPG>
-            <BotaoRPG variant="secondary" onClick={criarConta}>
-              Criar Conta
-            </BotaoRPG>
-          </div>
-      <button
-  onClick={recuperarSenha}
-  className="w-full text-xs text-amber-400 hover:text-amber-300 underline text-center mt-2"
->
-  Esqueceu a senha?
-</button>
-
+      {erroAuth && (
+        <div className="text-rose-400 text-sm text-center">
+          {erroAuth}
         </div>
+      )}
+
+      <div className="flex gap-3 justify-center pt-2">
+        <BotaoRPG onClick={entrar}>
+          Entrar
+        </BotaoRPG>
+        <BotaoRPG variant="secondary" onClick={criarConta}>
+          Criar Conta
+        </BotaoRPG>
       </div>
 
-    )}
+      <button
+        onClick={recuperarSenha}
+        className="w-full text-xs text-amber-400 hover:text-amber-300 underline text-center mt-2"
+      >
+        Esqueceu a senha?
+      </button>
+
+    </div>
+  </div>
+)}
 
   </div>
   );
