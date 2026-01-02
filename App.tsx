@@ -321,28 +321,34 @@ async function criarConta() {
   }
 
   const { data, error } = await supabase.auth.signUp({
-    email,
-    password: senha
-  });
+  email,
+  password: senha,
+  options: {
+    emailRedirectTo: window.location.origin
+  }
+});
+
 
   if (error) {
     if (error.message.toLowerCase().includes('already')) {
       setErroAuth(
         'Este email já está cadastrado. Use "Entrar" ou "Esqueceu a senha".'
       );
-    } else {
-      setErroAuth(error.message);
-    }
+} else if (error.message.toLowerCase().includes('password')) {
+  setErroAuth('A senha precisa ter pelo menos 6 caracteres.');
+} else {
+  setErroAuth('Não foi possível criar a conta. Tente novamente.');
+}
     return;
   }
 
   // 👇 CASO CLÁSSICO: email já existe, mas Supabase não retorna erro
-  if (!data?.user) {
-    setErroAuth(
-      'Este email já está cadastrado. Use "Entrar" ou "Esqueceu a senha".'
-    );
-    return;
-  }
+ if (!data?.user) {
+  setErroAuth(
+    'Este email já possui uma conta ativa. Use "Entrar" ou recupere sua senha.'
+  );
+  return;
+}
 
   setErroAuth(
     'Conta criada! Verifique seu email para confirmar antes de entrar.'
