@@ -271,6 +271,8 @@ async function entrar() {
 
 async function recuperarSenha() {
   setErroAuth(null);
+const recuperarSenha = async () => {
+  setErroAuth(null);
 
   if (!email) {
     setErroAuth('Digite seu email para recuperar a senha.');
@@ -282,11 +284,14 @@ async function recuperarSenha() {
   });
 
   if (error) {
-    setErroAuth('Erro ao enviar email de recuperação.');
-  } else {
-    setErroAuth('Email de recuperação enviado. Verifique sua caixa de entrada.');
+    setErroAuth('Não foi possível enviar o email de recuperação.');
+    return;
   }
-}
+
+  setErroAuth(
+    'Enviamos um email com instruções para redefinir sua senha.'
+  );
+};
 
 async function redefinirSenha() {
   if (!novaSenha) {
