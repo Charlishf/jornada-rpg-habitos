@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from './supabase';
-import { User } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import { getOrCreatePlayerId } from './player';
 import { loadLocalState, loadRemoteState, saveLocalState, saveRemoteState } from './persistence';
 
@@ -134,6 +134,7 @@ interface ItemInventario { idUnique: string; itemId: string; }
 interface Compra { id: string; itemId: string; custo: number; data: string; }
 
 interface EstadoJogo {
+  version: number;
   telaAtual: 'jornada' | 'missoes' | 'habitos' | 'penalidades' | 'loja' | 'eventos' | 'inventario';
   abaAtivaMissoes: 'diarias' | 'quests' | 'metas';
   missoesDiarias: MissaoDiaria[];
@@ -259,23 +260,19 @@ async function entrar() {
   });
 
   if (error) {
-    if (error.message.includes('Email not confirmed')) {
+    if (error.message.toLowerCase().includes('confirm')) {
       setErroAuth('Confirme seu email antes de entrar.');
-    } else if (error.message.includes('Invalid login')) {
-      setErroAuth('Email ou senha incorretos.');
     } else {
-      setErroAuth(error.message);
+      setErroAuth('Email ou senha incorretos.');
     }
   }
 }
 
 async function recuperarSenha() {
   setErroAuth(null);
-const recuperarSenha = async () => {
-  setErroAuth(null);
 
   if (!email) {
-    setErroAuth('Digite seu email para recuperar a senha.');
+    setErroAuth('Digite seu email.');
     return;
   }
 
@@ -284,14 +281,12 @@ const recuperarSenha = async () => {
   });
 
   if (error) {
-    setErroAuth('Não foi possível enviar o email de recuperação.');
+    setErroAuth('Não foi possível enviar o email.');
     return;
   }
 
-  setErroAuth(
-    'Enviamos um email com instruções para redefinir sua senha.'
-  );
-};
+  setErroAuth('Email de recuperação enviado.');
+}
 
 async function redefinirSenha() {
   if (!novaSenha) {
@@ -304,59 +299,49 @@ async function redefinirSenha() {
   });
 
   if (error) {
-    setErroAuth('Erro ao redefinir a senha.');
-  } else {
-    setErroAuth('Senha alterada com sucesso. Faça login novamente.');
-    setModoRecuperacao(false);
-    await supabase.auth.signOut();
+    setErroAuth('Erro ao redefinir senha.');
+    return;
   }
+
+  setErroAuth('Senha alterada com sucesso.');
+  setModoRecuperacao(false);
 }
   
 async function criarConta() {
   setErroAuth(null);
 
-  if (!email) {
-    setErroAuth('Digite um email válido.');
+  if (!email || !senha) {
+    setErroAuth('Digite um email e uma senha.');
     return;
   }
 
-  if (!senha) {
-    setErroAuth('Digite uma senha para criar sua conta.');
+  if (senha.length < 6) {
+    setErroAuth('A senha precisa ter pelo menos 6 caracteres.');
     return;
   }
 
   const { data, error } = await supabase.auth.signUp({
-  email,
-  password: senha,
-  options: {
-    emailRedirectTo: window.location.origin
-  }
-});
-
+    email,
+    password: senha,
+    options: {
+      emailRedirectTo: window.location.origin
+    }
+  });
 
   if (error) {
-    if (error.message.toLowerCase().includes('already')) {
-      setErroAuth(
-        'Este email já está cadastrado. Use "Entrar" ou "Esqueceu a senha".'
-      );
-} else if (error.message.toLowerCase().includes('password')) {
-  setErroAuth('A senha precisa ter pelo menos 6 caracteres.');
-} else {
-  setErroAuth('Não foi possível criar a conta. Tente novamente.');
-}
+    setErroAuth(error.message);
     return;
   }
 
-  // 👇 CASO CLÁSSICO: email já existe, mas Supabase não retorna erro
- if (!data?.user) {
-  setErroAuth(
-    'Este email já possui uma conta ativa. Use "Entrar" ou recupere sua senha.'
-  );
-  return;
-}
+  if (!data.user) {
+    setErroAuth(
+      'Este email já possui uma conta. Use "Entrar" ou "Esqueceu a senha".'
+    );
+    return;
+  }
 
   setErroAuth(
-    'Conta criada! Verifique seu email para confirmar antes de entrar.'
+    'Conta criada com sucesso! Verifique seu email para confirmar.'
   );
 }
 
@@ -446,11 +431,7 @@ useEffect(() => {
     (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setModoRecuperacao(true);
-        setUsuarioLogado(session?.user ?? null);
-        setCarregandoAuth(false);
-        return;
       }
-
       setUsuarioLogado(session?.user ?? null);
       setCarregandoAuth(false);
     }
